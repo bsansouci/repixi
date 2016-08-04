@@ -1,0 +1,22 @@
+{
+  "name": "repixi",
+  "version": "0.0.1",
+  "description": "Bindings to Pixi.js",
+  "jengaboot": {
+    "ocamlfindDependencies": {
+      "js_of_ocaml": "*"
+    },
+    "ppxFlag": "js_of_ocaml.ppx"
+  },
+  "dependencies": {
+    "pixi.js": "git://github.com/pixijs/pixi.js#dev"
+  },
+  "devDependencies": {
+    "jengaboot": "git://github.com/bsansouci/jengaboot.git#tmp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bsansouci/repixi.git"
+  },
+  "author": "Benjamin San Souci <benjamin.sansouci@gmail.com>"
+}
