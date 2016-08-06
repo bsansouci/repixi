@@ -2,6 +2,8 @@ open Js.Unsafe;
 
 let consolelog str => ignore @@ meth_call Firebug.console "log" [|inject (Js.string str)|];
 
+let pi = 3.14159265358979312;
+
 let pixi = variable "PIXI";
 
 let module Events = {
@@ -48,6 +50,9 @@ let module Texture = {
   let fromImage uri::uri => (new t) uri;
 };
 
+let module ScaleModes = {type t = | Linear | Nearest;};
+
+/* new PIXI.RenderTexture(renderer, 300, 200, PIXI.SCALE_MODES.LINEAR, 0.1); */
 let module Sprite = {
   class t texture => {
     as self;
@@ -85,6 +90,11 @@ let module Sprite = {
     method isOver = Js.to_bool (get _innerSelf "isOver");
     method setIsOver (i: bool) => set _innerSelf "isOver" i;
     method on evt (cb: t => unit) => {
+      /* This is a "hack" to get the compiler to accept that the function innerCb is referencing
+       * the class itself.
+       * Look at http://caml.inria.fr/pub/docs/manual-ocaml/objectexamples.html#ss%3Ausing-coercions
+       * and look for the example `class c = object (self) method m = (self :> c) end;;` which
+       * is explained to be a special case for the compiler.*/
       let innerCb _ => cb (self :> t);
       Events.on _innerSelf evt innerCb
     };
@@ -98,23 +108,85 @@ let module Container = {
     val _innerSelf: any = new_obj (get pixi "Container") [||];
     method raw = _innerSelf;
     method addChild (child: Sprite.t) => ignore @@ meth_call _innerSelf "addChild" [|child#raw|];
+    method addChildContainer (child: t) =>
+      ignore @@ meth_call _innerSelf "addChild" [|(child :> t)#raw|];
+    method setPosition (x: int) (y: int) => {
+      set _innerSelf "x" x;
+      set _innerSelf "y" y
+    };
   };
 };
 
-let module Renderer = {
-  class t width height renderedStr => {
+let module RenderTexture = {
+  class t
+        scaleModes::scaleModes=ScaleModes.Linear
+        sampleRatio::sampleRatio=1.0
+        (width: int)
+        (height: int) => {
     as self;
-    val _innerSelf =
-      new_obj
-        (get (variable "PIXI") renderedStr)
+    val _innerSelf: any =
+      meth_call
+        (get pixi "RenderTexture")
+        "create"
         [|
           inject (Js.number_of_float (float_of_int width)),
-          inject (Js.number_of_float (float_of_int height))
+          inject (Js.number_of_float (float_of_int height)),
+          inject scaleModes,
+          inject sampleRatio
         |];
+    method raw = _innerSelf;
+    method render (c: Container.t) => ignore @@ meth_call _innerSelf "render" [|c#raw|];
+  };
+};
+
+type paramT = {backgroundColor: int};
+
+let paramToObj param => {
+  let p = new_obj (get (variable "window") "Object") [||];
+  set p "backgroundColor" param.backgroundColor;
+  p
+};
+
+let module Renderer = {
+  class t param::(param: option paramT)=? width height renderedStr => {
+    as self;
+    val _innerSelf: any =
+      switch param {
+      | None =>
+        new_obj
+          (get pixi renderedStr)
+          [|
+            inject (Js.number_of_float (float_of_int width)),
+            inject (Js.number_of_float (float_of_int height))
+          |]
+      | Some param =>
+        new_obj
+          (get pixi renderedStr)
+          [|
+            inject (Js.number_of_float (float_of_int width)),
+            inject (Js.number_of_float (float_of_int height)),
+            inject (paramToObj param)
+          |]
+      };
+    method raw = _innerSelf;
     method width = int_of_float (Js.float_of_number (get _innerSelf "width"));
     method height = int_of_float (Js.float_of_number (get _innerSelf "height"));
     method view: View.t = get _innerSelf "view";
-    method render (stage: Container.t) => ignore @@ meth_call _innerSelf "render" [|stage#raw|];
+    method render renderTexture::(renderTexture: option RenderTexture.t)=? (stage: Container.t) =>
+      ignore @@
+        meth_call
+          _innerSelf
+          "render"
+          (
+            switch renderTexture {
+            | None => [|stage#raw|]
+            | Some rt => [|stage#raw, rt#raw|]
+            }
+          );
+    method renderToTexture (container: Container.t) (renderTexture: RenderTexture.t) =>
+      ignore @@ meth_call _innerSelf "render" [|container#raw, renderTexture#raw|];
+    method renderToSprite (renderTexture: RenderTexture.t) (sprite: Sprite.t) =>
+      ignore @@ meth_call _innerSelf "render" [|sprite#raw, renderTexture#raw|];
   };
 };
 
@@ -125,3 +197,6 @@ let module Dom = {
 
 let autoDetectRenderer width::width height::height =>
   (new Renderer.t) width height "autoDetectRenderer";
+
+let autoDetectRendererWithParam param::param width::width height::height =>
+  (new Renderer.t) param::param width height "autoDetectRenderer";
