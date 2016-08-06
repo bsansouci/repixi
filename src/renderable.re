@@ -1,3 +1,0 @@
-class t = {
-  as self;
-};

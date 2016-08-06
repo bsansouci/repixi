@@ -1,80 +1,74 @@
 let start () => {
   let open Js.Unsafe;
-  let renderer = Renderer.autoDetectRenderer width::800 height::600;
+  let renderer = Repixi.autoDetectRenderer width::800 height::600;
   ignore (meth_call (get Dom_html.document "body") "appendChild" [|inject renderer#view|]);
-  let stage = new Container.t;
-  let background = Repixi.createSpriteFromImage uri::"_assets/button_test_BG.jpg";
-  set background "width" renderer#width;
-  set background "height" renderer#height;
+  let stage = new Repixi.Container.t;
+  let background = Repixi.Sprite.fromImage uri::"_assets/button_test_BG.jpg";
+  background#setWidth renderer#width;
+  background#setHeight renderer#height;
   stage#addChild background;
-  let textureButton = Repixi.createTextureFromImage uri::"_assets/button.png";
-  let textureButtonDown = Repixi.createTextureFromImage uri::"_assets/buttonDown.png";
-  let textureButtonOver = Repixi.createTextureFromImage uri::"_assets/buttonOver.png";
+  let textureButton = Repixi.Texture.fromImage uri::"_assets/button.png";
+  let textureButtonDown = Repixi.Texture.fromImage uri::"_assets/buttonDown.png";
+  let textureButtonOver = Repixi.Texture.fromImage uri::"_assets/buttonOver.png";
   let buttons = ref [];
   let buttonPositions = [|175, 75, 655, 75, 410, 325, 150, 465, 685, 445|];
   let noop () => Repixi.consolelog "click";
   let onButtonDown this => {
-    set this "isDown" true;
-    set this "texture" textureButtonDown;
-    set this "alpha" 1.0
+    this#setIsDown true;
+    this#setTexture textureButtonDown;
+    this#setAlpha 1.0
   };
   let onButtonUp this => {
-    set this "isDown" false;
-    if (Js.to_bool (get this "isOver")) {
-      set this "texture" textureButtonOver
+    this#setIsDown false;
+    if this#isOver {
+      this#setTexture textureButtonOver
     } else {
-      set this "texture" textureButton
+      this#setTexture textureButton
     }
   };
   let onButtonOver this => {
-    set this "isOver" true;
-    if (not (Js.to_bool (get this "isDown"))) {
-      set this "texture" textureButtonOver
+    this#setIsOver true;
+    if (not this#isDown) {
+      this#setTexture textureButtonOver
     }
   };
   let onButtonOut this => {
-    set this "isOver" false;
-    if (not (Js.to_bool (get this "isDown"))) {
-      set this "texture" textureButton
+    this#setIsOver false;
+    if (not this#isDown) {
+      this#setTexture textureButton
     }
   };
   for i in 0 to 4 {
-    Repixi.consolelog (string_of_int i);
-    let button = Repixi.createSprite texture::textureButton;
-    set button "buttonMode" true;
-    ignore @@ meth_call (get button "anchor") "set" [|inject (Js.number_of_float 0.5)|];
-    set (get button "position") "x" buttonPositions.(i * 2);
-    set (get button "position") "y" buttonPositions.(i * 2 + 1);
-    set button "interactive" true;
+    let button = (new Repixi.Sprite.t) textureButton;
+    button#setButtonMode true;
+    button#setAnchor 0.5 0.5;
+    button#setPosition buttonPositions.(i * 2) buttonPositions.(i * 2 + 1);
+    button#setInteractive true;
     {
       let open Repixi.Events;
-      on button MouseDown onButtonDown;
-      on button TouchStart onButtonDown;
-      on button MouseUp onButtonUp;
-      on button TouchEnd onButtonUp;
-      on button MouseUpOutside onButtonUp;
-      on button TouchEndOutside onButtonUp;
-      on button MouseOver onButtonOver;
-      on button MouseOut onButtonOut;
+      button#on MouseDown onButtonDown;
+      button#on TouchStart onButtonDown;
+      button#on MouseUp onButtonUp;
+      button#on TouchEnd onButtonUp;
+      button#on MouseUpOutside onButtonUp;
+      button#on TouchEndOutside onButtonUp;
+      button#on MouseOver onButtonOver;
+      button#on MouseOut onButtonOut
     };
-    set button "tap" noop;
-    set button "click" noop;
+    button#setTap noop;
+    button#setClick noop;
     stage#addChild button;
     buttons := !buttons @ [button]
   };
-  ignore @@ meth_call (get (List.nth !buttons 0) "scale") "set" [|inject (Js.number_of_float 1.2)|];
-  set (List.nth !buttons 2) "rotation" (3.14159265358979312 /. 10.);
-  ignore @@ meth_call (get (List.nth !buttons 3) "scale") "set" [|inject (Js.number_of_float 0.8)|];
-  ignore @@
-    meth_call
-      (get (List.nth !buttons 4) "scale")
-      "set"
-      [|inject (Js.number_of_float 0.8), inject (Js.number_of_float 1.2)|];
-  set (List.nth !buttons 4) "rotation" 3.14159265358979312;
+  (List.nth !buttons 0)#setScale 1.2 1.2;
+  (List.nth !buttons 2)#setRotation (3.14159265358979312 /. 10.);
+  (List.nth !buttons 3)#setScale 0.8 0.8;
+  (List.nth !buttons 4)#setScale 0.8 1.2;
+  (List.nth !buttons 4)#setRotation 3.14159265358979312;
   let rec animate () => {
     let open Js.Unsafe;
     Dom_html._requestAnimationFrame (Js.wrap_callback animate);
-    renderer#render stage;
+    renderer#render stage
   };
   animate ()
 };

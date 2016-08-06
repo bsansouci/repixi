@@ -5,8 +5,7 @@
   "jengaboot": {
     "ocamlfindDependencies": {
       "js_of_ocaml": "*"
-    },
-    "ppxFlag": "js_of_ocaml.ppx"
+    }
   },
   "dependencies": {
     "pixi.js": "git://github.com/pixijs/pixi.js#dev"
