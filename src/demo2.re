@@ -1,7 +1,7 @@
 let start () => {
   let open Js.Unsafe;
   let renderer = Repixi.autoDetectRenderer width::800 height::600;
-  ignore (meth_call (get Dom_html.document "body") "appendChild" [|inject renderer#view|]);
+  Repixi.Dom.appendToBody renderer#view;
   let stage = new Repixi.Container.t;
   let background = Repixi.Sprite.fromImage uri::"_assets/button_test_BG.jpg";
   background#setWidth renderer#width;
@@ -66,7 +66,6 @@ let start () => {
   (List.nth !buttons 4)#setScale 0.8 1.2;
   (List.nth !buttons 4)#setRotation 3.14159265358979312;
   let rec animate () => {
-    let open Js.Unsafe;
     Dom_html._requestAnimationFrame (Js.wrap_callback animate);
     renderer#render stage
   };

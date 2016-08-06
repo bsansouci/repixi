@@ -4,24 +4,6 @@ let consolelog str => ignore @@ meth_call Firebug.console "log" [|inject (Js.str
 
 let pixi = variable "PIXI";
 
-let createContainer () => new_obj (get pixi "Container") [||];
-
-let loadTexture callback::cb name::name uri::uri => {
-  let loader =
-    meth_call (get pixi "loader") "add" [|inject (Js.string name), inject (Js.string uri)|];
-  meth_call loader "load" [|inject (Js.wrap_callback cb)|]
-};
-
-let createSprite texture::texture => new_obj (get pixi "Sprite") [|texture|];
-
-let createSpriteFromImage uri::uri =>
-  meth_call (get pixi "Sprite") "fromImage" [|inject (Js.string uri)|];
-
-let addToStage stage::stage obj => ignore @@ meth_call stage "addChild" [|inject obj|];
-
-let createTextureFromImage uri::uri =>
-  meth_call (get pixi "Texture") "fromImage" [|inject (Js.string uri)|];
-
 let module Events = {
   type eventT =
     | MouseDown
@@ -51,14 +33,6 @@ let module Events = {
         [|inject (Js.string (stringForEventType evt)), inject (Js.wrap_meth_callback cb)|];
 };
 
-let module TwoDPoint = {
-  class t x y => {
-    as self;
-    val mutable x = x;
-    val mutable y = y;
-  };
-};
-
 let module View = {
   class t = {
     as self;
@@ -73,6 +47,7 @@ let module Texture = {
   };
   let fromImage uri::uri => (new t) uri;
 };
+
 let module Sprite = {
   class t texture => {
     as self;
@@ -109,7 +84,7 @@ let module Sprite = {
     method setTexture (t: Texture.t) => set _innerSelf "texture" t#raw;
     method isOver = Js.to_bool (get _innerSelf "isOver");
     method setIsOver (i: bool) => set _innerSelf "isOver" i;
-    method on evt (cb : t => unit) => {
+    method on evt (cb: t => unit) => {
       let innerCb _ => cb (self :> t);
       Events.on _innerSelf evt innerCb
     };
@@ -141,6 +116,11 @@ let module Renderer = {
     method view: View.t = get _innerSelf "view";
     method render (stage: Container.t) => ignore @@ meth_call _innerSelf "render" [|stage#raw|];
   };
+};
+
+let module Dom = {
+  let appendToBody (child: View.t) =>
+    ignore @@ meth_call (get Dom_html.document "body") "appendChild" [|inject child|];
 };
 
 let autoDetectRenderer width::width height::height =>
