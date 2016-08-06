@@ -8,7 +8,8 @@
     }
   },
   "dependencies": {
-    "pixi.js": "git://github.com/pixijs/pixi.js#dev"
+    "pixi.js": "git://github.com/pixijs/pixi.js#dev",
+    "pixi-spine": "git://github.com/pixijs/pixi-spine"
   },
   "devDependencies": {
     "jengaboot": "git://github.com/bsansouci/jengaboot.git#tmp"

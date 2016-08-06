@@ -11,16 +11,16 @@ let start () => {
   for j in 0 to 4 {
     for i in 0 to 4 {
       let bunny = Repixi.Sprite.fromImage uri::"_assets/basics/bunny.png";
-      bunny#setPosition (30 * i) (30 * j);
+      bunny#setPosition ((30 * i), (30 * j));
       bunny#setRotation (Random.float 1. *. Repixi.pi);
       container#addChild bunny;
     };
   };
   let rt = new Repixi.RenderTexture.t sampleRatio::0.1 300 200;
   let sprite = new Repixi.Sprite.t rt;
-  sprite#setPosition 450 60;
+  sprite#setPosition (450, 60);
   stage#addChild sprite;
-  container#setPosition 100 60;
+  container#setPosition (100, 60);
 
   let rec animate () => {
     Dom_html._requestAnimationFrame (Js.wrap_callback animate);

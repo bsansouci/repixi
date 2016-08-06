@@ -35,6 +35,36 @@ let module Events = {
         [|inject (Js.string (stringForEventType evt)), inject (Js.wrap_meth_callback cb)|];
 };
 
+let module Renderable = {
+  class virtual t = {
+    as self;
+    method virtual raw: any;
+    method setAnchor (x: float, y: float) =>
+      ignore @@ meth_call (get self#raw "anchor") "set" [|inject x, inject y|];
+    method position: (int, int) = {
+      let p = get self#raw "position";
+      let x = get p "x";
+      let y = get p "y";
+      (x, y)
+    };
+    method setPosition (x: int, y: int) => {
+      let p = get self#raw "position";
+      set p "x" x;
+      set p "y" y
+    };
+    method scale: (float, float) = {
+      let s = get self#raw "scale";
+      (get s "x", get s "y")
+    };
+    method setScale (x: float, y: float) =>
+      ignore @@ meth_call (get self#raw "scale") "set" [|inject x, inject y|];
+    method rotation: float = get self#raw "rotation";
+    method setRotation (v: float) => set self#raw "rotation" v;
+    method interactive : bool = get self#raw "interactive";
+    method setInteractive (i: bool) => set self#raw "interactive" i;
+  };
+};
+
 let module View = {
   class t = {
     as self;
@@ -52,35 +82,18 @@ let module Texture = {
 
 let module ScaleModes = {type t = | Linear | Nearest;};
 
-/* new PIXI.RenderTexture(renderer, 300, 200, PIXI.SCALE_MODES.LINEAR, 0.1); */
 let module Sprite = {
   class t texture => {
     as self;
+    inherit class Renderable.t;
     val _innerSelf: any = new_obj (get pixi "Sprite") [|texture#raw|];
     method raw = _innerSelf;
+    method width: int = get _innerSelf "width";
+    method height: int = get _innerSelf "height";
     method setWidth (v: int) => set _innerSelf "width" v;
     method setHeight (v: int) => set _innerSelf "height" v;
     method buttonMode: bool = get _innerSelf "buttonMode";
     method setButtonMode (b: bool) => ignore @@ set _innerSelf "buttonMode" b;
-    method setAnchor x y =>
-      ignore @@
-        meth_call
-          (get _innerSelf "anchor")
-          "set"
-          [|inject (Js.number_of_float x), inject (Js.number_of_float y)|];
-    method setPosition (x: int) (y: int) => {
-      let p = get _innerSelf "position";
-      set p "x" x;
-      set p "y" y
-    };
-    method setScale x y =>
-      ignore @@
-        meth_call
-          (get _innerSelf "scale")
-          "set"
-          [|inject (Js.number_of_float x), inject (Js.number_of_float y)|];
-    method setRotation (v: float) => set _innerSelf "rotation" v;
-    method setInteractive (i: bool) => set _innerSelf "interactive" i;
     method setTap (f: unit => unit) => set _innerSelf "tap" f;
     method setClick (f: unit => unit) => set _innerSelf "click" f;
     method isDown = Js.to_bool (get _innerSelf "isDown");
@@ -102,17 +115,60 @@ let module Sprite = {
   let fromImage uri::uri => (new t) (Texture.fromImage uri::uri);
 };
 
+type spineT = {spineData: any};
+
+let module Spine = {
+  class t (spineData: spineT) => {
+    as self;
+    inherit class Renderable.t;
+    val _innerSelf = new_obj (get (get pixi "spine") "Spine") [|spineData.spineData|];
+    method raw = _innerSelf;
+    /* No `too` isn't a typo, `to` is a keyword. */
+    method setMixByName from::from too::too duration::(duration: float) =>
+      ignore @@
+        meth_call
+          (get _innerSelf "stateData")
+          "setMixByName"
+          [|inject (Js.string from), inject (Js.string too), inject duration|];
+    method setAnimationByName startTime::(startTime: int) animName::animName loop::(loop: bool) =>
+      ignore @@
+        meth_call
+          (get _innerSelf "state")
+          "setAnimationByName"
+          [|inject startTime, inject (Js.string animName), inject loop|];
+    method addAnimationByName
+           startTime::(startTime: int)
+           animName::animName
+           loop::(loop: bool)
+           randomInt::(randomInt : int) =>
+      ignore @@
+        meth_call
+          (get _innerSelf "state")
+          "addAnimationByName"
+          [|inject startTime, inject (Js.string animName), inject loop, inject randomInt|];
+  };
+};
+
 let module Container = {
   class t = {
     as self;
+    inherit class Renderable.t;
     val _innerSelf: any = new_obj (get pixi "Container") [||];
     method raw = _innerSelf;
     method addChild (child: Sprite.t) => ignore @@ meth_call _innerSelf "addChild" [|child#raw|];
     method addChildContainer (child: t) =>
       ignore @@ meth_call _innerSelf "addChild" [|(child :> t)#raw|];
-    method setPosition (x: int) (y: int) => {
-      set _innerSelf "x" x;
-      set _innerSelf "y" y
+    method addChildSpine (child: Spine.t) =>
+      ignore @@ meth_call _innerSelf "addChild" [|child#raw|];
+
+    method on evt (cb: t => unit) => {
+      /* This is a "hack" to get the compiler to accept that the function innerCb is referencing
+       * the class itself.
+       * Look at http://caml.inria.fr/pub/docs/manual-ocaml/objectexamples.html#ss%3Ausing-coercions
+       * and look for the example `class c = object (self) method m = (self :> c) end;;` which
+       * is explained to be a special case for the compiler.*/
+      let innerCb _ => cb (self :> t);
+      Events.on _innerSelf evt innerCb
     };
   };
 };
@@ -128,12 +184,7 @@ let module RenderTexture = {
       meth_call
         (get pixi "RenderTexture")
         "create"
-        [|
-          inject (Js.number_of_float (float_of_int width)),
-          inject (Js.number_of_float (float_of_int height)),
-          inject scaleModes,
-          inject sampleRatio
-        |];
+        [|inject width, inject height, inject scaleModes, inject sampleRatio|];
     method raw = _innerSelf;
     method render (c: Container.t) => ignore @@ meth_call _innerSelf "render" [|c#raw|];
   };
@@ -152,25 +203,13 @@ let module Renderer = {
     as self;
     val _innerSelf: any =
       switch param {
-      | None =>
-        new_obj
-          (get pixi renderedStr)
-          [|
-            inject (Js.number_of_float (float_of_int width)),
-            inject (Js.number_of_float (float_of_int height))
-          |]
+      | None => new_obj (get pixi renderedStr) [|inject width, inject height|]
       | Some param =>
-        new_obj
-          (get pixi renderedStr)
-          [|
-            inject (Js.number_of_float (float_of_int width)),
-            inject (Js.number_of_float (float_of_int height)),
-            inject (paramToObj param)
-          |]
+        new_obj (get pixi renderedStr) [|inject width, inject height, inject (paramToObj param)|]
       };
     method raw = _innerSelf;
-    method width = int_of_float (Js.float_of_number (get _innerSelf "width"));
-    method height = int_of_float (Js.float_of_number (get _innerSelf "height"));
+    method width: int = get _innerSelf "width";
+    method height: int = get _innerSelf "height";
     method view: View.t = get _innerSelf "view";
     method render renderTexture::(renderTexture: option RenderTexture.t)=? (stage: Container.t) =>
       ignore @@
@@ -188,6 +227,27 @@ let module Renderer = {
     method renderToSprite (renderTexture: RenderTexture.t) (sprite: Sprite.t) =>
       ignore @@ meth_call _innerSelf "render" [|sprite#raw, renderTexture#raw|];
   };
+};
+
+let module Loader = {
+  class t (name: string) (uri: string) => {
+    as self;
+    val _innerSelf: any =
+      meth_call (get pixi "loader") "add" [|inject (Js.string name), inject (Js.string uri)|];
+    method load (cb: t => spineT => unit) => {
+      /* hack again... Now we're using `name` inside res to get the data itself...
+       * I need to figure out what the best way to convert the "chain" paradigm that looks like
+       * `obj.add().add().add().load()` where `load` changes the state of the whole thing
+       * such that whenever any `add` is ready, it'll call the cb given to `load`.
+       * I'm not sure that paradigm makes any sense here in OCaml. */
+      let innerCb loader res => {
+        let data = get res name;
+        cb (self :> t) {spineData: get data "spineData"}
+      };
+      ignore @@ meth_call _innerSelf "load" [|inject (Js.wrap_callback innerCb)|]
+    };
+  };
+  let add name::name uri::uri => (new t) name uri;
 };
 
 let module Dom = {

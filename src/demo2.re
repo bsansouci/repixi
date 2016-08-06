@@ -41,8 +41,8 @@ let start () => {
   for i in 0 to 4 {
     let button = (new Repixi.Sprite.t) textureButton;
     button#setButtonMode true;
-    button#setAnchor 0.5 0.5;
-    button#setPosition buttonPositions.(i * 2) buttonPositions.(i * 2 + 1);
+    button#setAnchor (0.5, 0.5);
+    button#setPosition (buttonPositions.(i * 2), buttonPositions.(i * 2 + 1));
     button#setInteractive true;
     {
       let open Repixi.Events;
@@ -60,10 +60,10 @@ let start () => {
     stage#addChild button;
     buttons := !buttons @ [button]
   };
-  (List.nth !buttons 0)#setScale 1.2 1.2;
+  (List.nth !buttons 0)#setScale (1.2, 1.2);
   (List.nth !buttons 2)#setRotation (Repixi.pi /. 10.);
-  (List.nth !buttons 3)#setScale 0.8 0.8;
-  (List.nth !buttons 4)#setScale 0.8 1.2;
+  (List.nth !buttons 3)#setScale (0.8, 0.8);
+  (List.nth !buttons 4)#setScale (0.8, 1.2);
   (List.nth !buttons 4)#setRotation Repixi.pi;
   let rec animate () => {
     Dom_html._requestAnimationFrame (Js.wrap_callback animate);
