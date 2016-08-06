@@ -1,3 +1,8 @@
+/*
+ * vim: set ft=rust:
+ * vim: set ft=reason:
+ */
+
 open Js.Unsafe;
 
 let consolelog str => ignore @@ meth_call Firebug.console "log" [|inject (Js.string str)|];

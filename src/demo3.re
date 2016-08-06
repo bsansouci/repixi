@@ -1,3 +1,8 @@
+/*
+ * vim: set ft=rust:
+ * vim: set ft=reason:
+ */
+
 let start () => {
   let open Js.Unsafe;
   Random.self_init ();

@@ -1,3 +1,8 @@
+/*
+ * vim: set ft=rust:
+ * vim: set ft=reason:
+ */
+
 let start () => {
   let open Js.Unsafe;
   let renderer = Repixi.autoDetectRenderer width::800 height::600;
