@@ -65,7 +65,7 @@ let module Renderable = {
       ignore @@ meth_call (get self#raw "scale") "set" [|inject x, inject y|];
     method rotation: float = get self#raw "rotation";
     method setRotation (v: float) => set self#raw "rotation" v;
-    method interactive : bool = get self#raw "interactive";
+    method interactive: bool = get self#raw "interactive";
     method setInteractive (i: bool) => set self#raw "interactive" i;
   };
 };
@@ -145,7 +145,7 @@ let module Spine = {
            startTime::(startTime: int)
            animName::animName
            loop::(loop: bool)
-           randomInt::(randomInt : int) =>
+           randomInt::(randomInt: int) =>
       ignore @@
         meth_call
           (get _innerSelf "state")
@@ -165,7 +165,6 @@ let module Container = {
       ignore @@ meth_call _innerSelf "addChild" [|(child :> t)#raw|];
     method addChildSpine (child: Spine.t) =>
       ignore @@ meth_call _innerSelf "addChild" [|child#raw|];
-
     method on evt (cb: t => unit) => {
       /* This is a "hack" to get the compiler to accept that the function innerCb is referencing
        * the class itself.
@@ -235,10 +234,18 @@ let module Renderer = {
 };
 
 let module Loader = {
-  class t (name: string) (uri: string) => {
+  class t prevInner::(prevInner: option any)=? (name: string) (uri: string) => {
     as self;
     val _innerSelf: any =
-      meth_call (get pixi "loader") "add" [|inject (Js.string name), inject (Js.string uri)|];
+      meth_call
+        (
+          switch prevInner {
+          | None => get pixi "loader"
+          | Some prevInner => prevInner
+          }
+        )
+        "add"
+        [|inject (Js.string name), inject (Js.string uri)|];
     method load (cb: t => spineT => unit) => {
       /* hack again... Now we're using `name` inside res to get the data itself...
        * I need to figure out what the best way to convert the "chain" paradigm that looks like
@@ -251,6 +258,7 @@ let module Loader = {
       };
       ignore @@ meth_call _innerSelf "load" [|inject (Js.wrap_callback innerCb)|]
     };
+    method add name::name uri::uri => (new t) prevInner::_innerSelf name uri;
   };
   let add name::name uri::uri => (new t) name uri;
 };

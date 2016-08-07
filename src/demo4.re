@@ -64,6 +64,7 @@ let start () => {
         };
         let (_, y) = forground2#position;
         forground2#setPosition (!newX - 1286, y);
+        /* Aaaah autocurrying... */
         Dom_html._requestAnimationFrame (Js.wrap_callback (animate position));
         renderer#render stage
       };
